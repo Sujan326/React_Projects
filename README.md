@@ -1,1 +1,1 @@
-Testing
+To run the second project backend use command: npm run server.
