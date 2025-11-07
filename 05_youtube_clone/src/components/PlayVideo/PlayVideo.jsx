@@ -1,27 +1,81 @@
 import "./PlayVideo.css";
-import video1 from "../../assets/video.mp4";
 import like from "../../assets/like.png";
 import dislike from "../../assets/dislike.png";
 import share from "../../assets/share.png";
 import save from "../../assets/save.png";
-import jack from "../../assets/jack.png";
-import user_profile from "../../assets/user_profile.jpg";
+import { useEffect, useState } from "react";
+import { API_KEY, valueConverter } from "../../data";
+import moment from "moment";
+import { useParams } from "react-router-dom";
 
 function PlayVideo() {
+
+  const {video_id} = useParams();
+
+  const [apiData, setApiData] = useState(null);
+  const [channelData, setChannelData] = useState(null);
+  const [commentData, setCommentData] = useState([]);
+
+  const fetchVideoData = async () => {
+    // Fetching videos data
+    const videoDetails_url = `https://youtube.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id=${video_id}&key=${API_KEY}`;
+
+    const res = await fetch(videoDetails_url);
+    const data = await res.json();
+    setApiData(data.items[0]);
+    console.log("Video Data: ", data.items[0])
+  };
+
+  const fetchOtherData = async () => {
+    // Fetching Channel Data
+    const channelDetails_url = `https://youtube.googleapis.com/youtube/v3/channels?part=snippet%2CcontentDetails%2Cstatistics&id=${apiData.snippet.channelId}&key=${API_KEY}`;
+
+    const res = await fetch(channelDetails_url);
+    const data = await res.json();
+    setChannelData(data.items[0]);
+    console.log("Channel Details: ", data.items[0]);
+
+    // Fetching Comment Data:
+    const comment_url = `https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet%2Creplies&maxResults=50&videoId=${video_id}&key=${API_KEY}`;
+
+    const response = await fetch(comment_url);
+    const cmtData = await response.json();
+    setCommentData(cmtData.items);
+    console.log("Comment Data: ", cmtData.items);
+  };
+
+  useEffect(() => {
+    fetchVideoData();
+  }, [video_id]);
+
+  useEffect(() => {
+    fetchOtherData();
+  }, [apiData]);
+
   return (
     <div className="play-video">
-      <video src={video1} controls autoPlay muted></video>
-      <h3>Best YouTube Channel To Learn Web Development</h3>
+      {/* <video src={video1} controls autoPlay muted></video> */}
+      <iframe
+        src={`https://www.youtube.com/embed/${video_id}?autoplay=1`}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      ></iframe>
+      <h3>{apiData ? apiData.snippet.title : "Title Here"}</h3>
       <div className="play-video-info">
-        <p>1224 Views &bull; 2 days ago</p>
+        <p>
+          {apiData ? valueConverter(apiData.statistics.viewCount) : "16K"} Views
+          &bull; {apiData ? moment(apiData.snippet.publishedAt).fromNow() : ""}
+        </p>
         <div>
           <span>
             <img src={like} alt="" />
-            125
+            {apiData ? valueConverter(apiData.statistics.likeCount) : ""}
           </span>
           <span>
             <img src={dislike} alt="" />
-            10
+            {apiData ? apiData.statistics.dislikeCount : ""}
           </span>
           <span>
             <img src={share} alt="" />
@@ -36,96 +90,53 @@ function PlayVideo() {
       <hr />
 
       <div className="publisher">
-        <img src={jack} alt="" />
+        <img
+          src={channelData ? channelData.snippet.thumbnails.default.url : null}
+          alt=""
+        />
         <div>
-          <p>GreatStack</p>
-          <span>1M Subscibers</span>
+          <p>{apiData ? apiData.snippet.channelTitle : ""}</p>
+          <span>
+            {channelData
+              ? valueConverter(channelData.statistics.subscriberCount)
+              : "10"}{" "}
+            Subscibers
+          </span>
         </div>
         <button>Subscribe</button>
       </div>
 
       <div className="video-description">
-        <p>Channel that makes learing Easy</p>
-        <p>Subscribe GreatStack to Watch More Tutorials on Web Development</p>
+        <p>
+          {apiData
+            ? apiData.snippet.description.slice(0, 249)
+            : "Description Here"}
+        </p>
         <hr />
-        <h4>140 Comments</h4>
-
-        <div className="comment">
-          <img src={user_profile} alt="" />
-          <div>
-            <h3>
-              Jack Nicholson <span>1 day ago</span>
-            </h3>
-            <p>
-              Lorem, ipsum dolor sit amet consectetur adipisicing elit. Adipisci
-              mollitia voluptas, veniam quos sint ipsa esse fugiat nobis
-              voluptatem iste neque dolore omnis cum. Vero totam alias eaque ad
-              incidunt?
-            </p>
-            <div className="comment-action">
-              <img src={like} alt="" />
-              <span>244</span>
-              <img src={dislike} alt="" />
+        <h4>
+          {apiData ? valueConverter(apiData.statistics.commentCount) : ""}{" "}
+          Comments
+        </h4>
+        {commentData.map((item, index) => {
+          return (
+            <div key={index} className="comment">
+              <img src={item.snippet.topLevelComment.snippet.authorProfileImageUrl} alt="" />
+              <div>
+                <h3>
+                  {item.snippet.topLevelComment.snippet.authorDisplayName} <span>1 day ago</span>
+                </h3>
+                <p>
+                  {item.snippet.topLevelComment.snippet.textDisplay}
+                </p>
+                <div className="comment-action">
+                  <img src={like} alt="" />
+                  <span>{valueConverter(item.snippet.topLevelComment.snippet.likeCount)}</span>
+                  <img src={dislike} alt="" />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="comment">
-          <img src={user_profile} alt="" />
-          <div>
-            <h3>
-              Jack Nicholson <span>1 day ago</span>
-            </h3>
-            <p>
-              Lorem, ipsum dolor sit amet consectetur adipisicing elit. Adipisci
-              mollitia voluptas, veniam quos sint ipsa esse fugiat nobis
-              voluptatem iste neque dolore omnis cum. Vero totam alias eaque ad
-              incidunt?
-            </p>
-            <div className="comment-action">
-              <img src={like} alt="" />
-              <span>244</span>
-              <img src={dislike} alt="" />
-            </div>
-          </div>
-        </div>
-        <div className="comment">
-          <img src={user_profile} alt="" />
-          <div>
-            <h3>
-              Jack Nicholson <span>1 day ago</span>
-            </h3>
-            <p>
-              Lorem, ipsum dolor sit amet consectetur adipisicing elit. Adipisci
-              mollitia voluptas, veniam quos sint ipsa esse fugiat nobis
-              voluptatem iste neque dolore omnis cum. Vero totam alias eaque ad
-              incidunt?
-            </p>
-            <div className="comment-action">
-              <img src={like} alt="" />
-              <span>244</span>
-              <img src={dislike} alt="" />
-            </div>
-          </div>
-        </div>
-        <div className="comment">
-          <img src={user_profile} alt="" />
-          <div>
-            <h3>
-              Jack Nicholson <span>1 day ago</span>
-            </h3>
-            <p>
-              Lorem, ipsum dolor sit amet consectetur adipisicing elit. Adipisci
-              mollitia voluptas, veniam quos sint ipsa esse fugiat nobis
-              voluptatem iste neque dolore omnis cum. Vero totam alias eaque ad
-              incidunt?
-            </p>
-            <div className="comment-action">
-              <img src={like} alt="" />
-              <span>244</span>
-              <img src={dislike} alt="" />
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
